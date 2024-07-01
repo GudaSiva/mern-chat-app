@@ -2,7 +2,37 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import generateTokenAndSetCookie from "../utils/generate-token.util.js";
 
-export const login = () => {};
+export const login = async (req, res) => {
+  try {
+    // request user details
+    const { user_name, password } = req.body;
+    // find user details into the db
+    const userDetails = await User.findOne({ user_name });
+    // compare input password and db password
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      userDetails?.password || ""
+    );
+    // if user details correct
+    if (!userDetails || !isPasswordCorrect) {
+      return res.status(404).json({
+        error: "INVALID USER DETAILS",
+      });
+    }
+    generateTokenAndSetCookie(userDetails._id, res);
+    const responseDetails = {
+      user_name: userDetails.user_name,
+      user: userDetails,
+    };
+    // success response
+    return res.status(200).json(responseDetails);
+  } catch (error) {
+    console.error("Something went wrong while login to the DB", error);
+    return res.status(500).json({
+      error: "SOMETHING WENT WRONG WHILE LOGIN",
+    });
+  }
+};
 
 export const signUp = async (req, res) => {
   try {
@@ -58,7 +88,6 @@ export const signUp = async (req, res) => {
       });
     }
   } catch (error) {
-    console.log(/error/, error);
     console.error("Something went wrong while signing up to the DB", error);
     return res.status(500).json({
       error: "SOMETHING WENT WRONG WHILE SIGNING UP",
@@ -66,6 +95,14 @@ export const signUp = async (req, res) => {
   }
 };
 
-export const logOut = () => {
-  console.log("logOut response");
+export const logOut = (req, res) => {
+  try {
+    res.cookie("jwt", "", { magAge: 0 });
+    res.status(200).json({ message: "LOGGED OUT SUCCESSFULLY" });
+  } catch (error) {
+    console.log("Some thing went wrong while logout", error.message);
+    return res.status(500).json({
+      error: "SOME THING WENT WRONG WHILE LOGOUT",
+    });
+  }
 };
